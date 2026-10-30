@@ -600,7 +600,8 @@ svg{display:block}
 <script>
 /* 代码默认走 jsDelivr CDN（实测比 GitHub Pages 直连快约 240 倍），失败自动回退站内文件 */
 (function(){
- var CDN='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@main/';
+ /* JS 锚定到具体 commit：内容即最终版，CDN 永久缓存且必定一致 */
+ var CDN='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@fc96b82df537de43b9a92812ea60c5c3248ba16c/';
  var files=['ui.js','data.js','app.js'],i=0,cdnOK=true;
  function add(f){
   var s=document.createElement('script');s.src=f;
