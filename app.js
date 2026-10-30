@@ -144,7 +144,11 @@ function ringOnce(){[[784,0],[988,.2],[1175,.4],[988,.6],[784,1.0],[988,1.2],[11
 document.addEventListener('pointerdown',()=>ac(),{once:true});
 
 function setStatus(dark){curDark=!!dark;$('#sb').classList.toggle('light',curDark);$('#hb').classList.toggle('light',curDark)}
-function updateIsland(){typeof updateCrumb==='function'&&updateCrumb();const on=nowSong>=0&&!PLAYER.paused&&!['music','lock','pin'].includes(view)&&!OV.querySelector('.np,.call,.viewer');$('#island').classList.toggle('act',on)}
+function updateIsland(){typeof updateCrumb==='function'&&updateCrumb();
+ const on=nowSong>=0&&!PLAYER.paused&&!['music','lock','pin'].includes(view)&&!OV.querySelector('.np,.call,.viewer');
+ const el=$('#island');if(el)el.classList.toggle('act',on);
+ const ia=el&&el.querySelector('.ia');
+ if(ia)ia.style.backgroundImage=(on&&nowSong>=0)?`url("${songs[nowSong].cover}")`:''}
 
 /* ============================ 锁屏 / 密码 ============================ */
 function ncardHTML(n){
@@ -714,7 +718,7 @@ VIEWS.music=()=>{
   <div class="group">${songs.map((s,i)=>`<button class="mrow" onclick="playSong(${i})">
    <span class="art"><img src="${s.cover}" alt="" onerror="this.style.display='none'"></span>
    <span class="mt ${nowSong===i?'pl':''}">${esc(s.title)}<small>${esc(s.artist)}</small></span></button>`).join('')}</div></div>
-  ${nowSong>=0?`<div class="mini" onclick="openNP()"><span class="art"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></span><b>${esc(songs[nowSong].title)}</b>${playing?G.pauseF.replace('<svg','<svg width="22" height="22"'):G.playF.replace('<svg','<svg width="22" height="22"')}</div>`:''}`}};
+  ${nowSong>=0?`<div class="mini" onclick="openNP()"><span class="art"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></span><b>${esc(songs[nowSong].title)}</b><span class="mbtn" onclick="event.stopPropagation();togglePlay()">${playing?G.pauseF.replace('<svg','<svg width="22" height="22"'):G.playF.replace('<svg','<svg width="22" height="22"')}</span></div>`:''}`}};
 function shufflePlay(){let i=Math.floor(Math.random()*songs.length);
  if(songs.length>1&&i===nowSong)i=(i+1+Math.floor(Math.random()*(songs.length-1)))%songs.length;
  nowSong=i;PLAYER.src=songs[i].src;PLAYER.play().catch(()=>{});updateIsland();if(view==='music')show('music')}
