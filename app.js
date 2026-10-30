@@ -39,7 +39,8 @@ function cdnScan(root){
 }
 if(window.MutationObserver){
  const _mo=new MutationObserver(ms=>{for(const m of ms){for(const n of m.addedNodes){cdnScan(n)}}});
- document.addEventListener('DOMContentLoaded',()=>_mo.observe(document.body,{childList:true,subtree:true}),{once:true});
+ const _boot=()=>{cdnScan(document.body);_mo.observe(document.body,{childList:true,subtree:true})};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_boot,{once:true});else _boot();
 }
 /* ============================================================
    iPhone UI / 交互引擎（中文 · 微信 · 俄罗斯方块）
@@ -207,7 +208,8 @@ function renderLock(){
  <div class="lk-notes">${lockNotes.map((n,i)=>`<button class="ncard" onclick="lockNoteTap(${i},event)">${ncardHTML(n)}</button>`).join('')}</div>
  <button class="lk-btn" style="left:46px" onclick="event.stopPropagation();this.animate([{transform:'scale(1.2)'},{transform:'none'}],250)">${G.flash.replace('<svg','<svg width="24" height="24" style="color:#fff"')}</button>
  <button class="lk-btn" style="right:46px" onclick="event.stopPropagation();this.animate([{transform:'scale(1.2)'},{transform:'none'}],250)">${G.camera.replace('<svg','<svg width="24" height="24" style="color:#fff"')}</button>
- <div class="lk-hint">${t('swipeUp')}</div>`}
+ <div class="lk-hint">${t('swipeUp')}</div>`;
+ cdnScan($('#lkc'))}
 function lockNoteTap(i,e){e.stopPropagation();if(lockNotes[i].app==='wechat'){pendingOpen='wechat';mainUnread=0;saveState()}goPin()}
 (function lockDrag(){const el=$('#lkc');let y0=null,dy=0,moved=false;
  el.addEventListener('pointerdown',e=>{if(view!=='lock'||e.target.closest('button'))return;y0=e.clientY;dy=0;moved=false;el.setPointerCapture(e.pointerId)});
@@ -272,6 +274,7 @@ function renderHome(){
  <div class="hpage" id="hp1" style="transform:translateX(${homePage===1?0:100}%)"></div>
  <div class="hdots"><i class="${homePage===0?'on':''}"></i><i class="${homePage===1?'on':''}"></i></div>
  <div class="dock">${['phone','safari','wechat','music'].map(appBtn).join('')}</div>`;
+ cdnScan(HOME);
  HOME.querySelectorAll('.hgrid,.hpage').forEach(el=>el.animate([{opacity:.99},{opacity:1}],{duration:1}));
  bindHomeSwipe()}
 function bindHomeSwipe(){let x0=null,y0=0;
@@ -297,7 +300,7 @@ function wireScroll(pg){const sc=pg.querySelector('.scroll');if(sc)sc.addEventLi
 function show(id,anim='swap'){
  const old=[...APP.children];old.forEach(o=>{o.querySelectorAll('video').forEach(v=>v.pause())});
  if(PLAYER.dataset.voice&&!(id==='chat')){PLAYER.pause()}
- view=id;const v=VIEWS[id]();const pg=document.createElement('div');pg.className='pg '+(v.cls||'');pg.innerHTML=v.html;pg.dataset.view=id;pg.dataset.dark=v.dark?'1':'';
+ view=id;const v=VIEWS[id]();const pg=document.createElement('div');pg.className='pg '+(v.cls||'');pg.innerHTML=v.html;cdnScan(pg);pg.dataset.view=id;pg.dataset.dark=v.dark?'1':'';
  if(anim==='pop')APP.insertBefore(pg,APP.firstChild);else APP.appendChild(pg);
  setStatus(v.dark);wireScroll(pg);
  const done=()=>old.forEach(o=>o.remove());
