@@ -1,12 +1,12 @@
 'use strict';
 /* ============================================================
-   资源加速层：站内 assets/ 资源自动走 jsDelivr CDN
-   （实测 GitHub Pages 直连约 7KB/s，CDN 约 1.7MB/s）
-   CDN 不可用时自动整体回退到站内相对路径，不影响可用性
+   资源加速层：站内 assets/ 资源可自动走 jsDelivr CDN
+   默认走站内：实测 jsDelivr 对本仓库会 301 跳转 raw.githubusercontent.com，
+   而该域名在国内常连不上，会把整站拖垮。因此先走站内保证可用，
+   后台探测确认 CDN 能直出 200 后，再自动切换到 CDN 提速。
    ============================================================ */
-/* 使用独立的资源仓库作 CDN 源，避免主站点仓库上旧版大文件被 CDN 缓存住 */
-const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@main/';
-let CDN_ON=true;
+const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/Xieyuchen-Phone.github.io@main/';
+let CDN_ON=false;
 function cdnU(p){return (CDN_ON&&typeof p==='string'&&p.indexOf('assets/')===0)?CDN_BASE+encodeURI(p):p}
 function cdnBgUrl(p){return 'url("'+cdnU(p)+'")'}
 let cdnErrs=0;
@@ -14,7 +14,8 @@ let cdnErrs=0;
 function cdnNoteFail(el){
  if(el){
   const l=el.getAttribute('data-loc');
-  if(l&&(el.tagName==='IMG'||el.tagName==='VIDEO')){
+  /* 只有当前确实是 CDN 地址才回退，避免站内重复下载一次 */
+  if(l&&(el.tagName==='IMG'||el.tagName==='VIDEO')&&String(el.src||'').indexOf('jsdelivr')>=0){
    el.src=l;const po=el.getAttribute('data-loc-poster');if(po)el.poster=po;
   }
   /* 预取／探测用的游离图片不计入：它们失败不代表页面上看不到图 */
@@ -33,7 +34,7 @@ function cdnFail(){
  })}catch(e){}
 }
 function cdnEl(el){
- if(!CDN_ON||!el||el.nodeType!==1)return;
+ if(!el||el.nodeType!==1)return;
  if(el.hasAttribute('data-loc')){
   if(!el.dataset.cdnBound){el.dataset.cdnBound='1';el.addEventListener('error',()=>cdnNoteFail(el),{once:true})}
   return}
@@ -48,16 +49,29 @@ function cdnEl(el){
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.style.backgroundImage=cdnBgUrl(p)}
  }
 }
-/* 探测 CDN 可达性：先试一次，失败隔 1.5s 重试，两次都失败才整体回退 */
+/* 探测 CDN 是否真能直出内容：必须 2.5s 内加载成功才算可用（301 跳 raw 的情况会超时，直接放弃） */
 function cdnProbe(){
- if(!CDN_ON)return;
- const u=cdnU('assets/avatar/xie.jpg');
- const i=new Image();let tried=0;
- i.onerror=()=>{if(tried++)return;setTimeout(()=>{const j=new Image();j.onerror=()=>cdnFail();j.src=u+'?r=1'},1500)};
+ if(CDN_ON)return;
+ const u=CDN_BASE+'assets/avatar/xie.jpg';
+ const i=new Image();let done=false;
+ const now=()=>(window.performance&&performance.now)?performance.now():Date.now();
+ const t0=now();
+ i.onload=()=>{if(done)return;done=true;
+  if(i.naturalWidth>0&&now()-t0<2500){CDN_ON=true;cdnUpgrade()}};
+ i.onerror=()=>{done=true};
  i.src=u;
+ setTimeout(()=>{if(!done){done=true;try{i.src=''}catch(e){}}},6000);
+}
+/* 切到 CDN：只升级还没加载完的元素，已显示的保持原样，既不闪烁也不重复下载 */
+function cdnUpgrade(){
+ try{document.querySelectorAll('[data-loc]').forEach(el=>{
+  const l=el.getAttribute('data-loc');if(!l)return;
+  if(el.tagName==='IMG'&&!el.complete){el.src=cdnU(l)}
+  else if(el.tagName==='VIDEO'&&el.readyState===0){el.src=cdnU(l);const po=el.getAttribute('data-loc-poster');if(po)el.poster=cdnU(po)}
+ })}catch(e){}
 }
 function cdnHTML(html){
- if(!CDN_ON||!html)return html;
+ if(!html)return html;
  return String(html)
   .replace(/src="(assets\/[^"]*)"/g,(m,p)=>'src="'+cdnU(p)+'" data-loc="'+p+'"')
   .replace(/poster="(assets\/[^"]*)"/g,(m,p)=>'poster="'+cdnU(p)+'" data-loc-poster="'+p+'"');
@@ -75,7 +89,7 @@ function setBg(el,p){
  i.onerror=()=>{_bgCache[url]='bad';if(el.getAttribute('data-loc')===p)el.style.backgroundImage=local;cdnNoteFail()};
  i.src=url;}
 function cdnScan(root){
- if(!CDN_ON||!root||root.nodeType!==1)return;
+ if(!root||root.nodeType!==1)return;
  cdnEl(root);
  const list=root.querySelectorAll('img[src],video[src],[data-bg]');
  for(let i=0;i<list.length;i++)cdnEl(list[i]);
