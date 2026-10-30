@@ -1,5 +1,46 @@
 'use strict';
 /* ============================================================
+   资源加速层：站内 assets/ 资源自动走 jsDelivr CDN
+   （实测 GitHub Pages 直连约 7KB/s，CDN 约 1.7MB/s）
+   CDN 不可用时自动整体回退到站内相对路径，不影响可用性
+   ============================================================ */
+const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/Xieyuchen-Phone.github.io@main/';
+let CDN_ON=true;
+function cdnU(p){return (CDN_ON&&typeof p==='string'&&p.indexOf('assets/')===0)?CDN_BASE+encodeURI(p):p}
+function cdnBgUrl(p){return 'url("'+cdnU(p)+'")'}
+function cdnFail(){
+ if(!CDN_ON)return;CDN_ON=false;
+ try{document.querySelectorAll('[data-loc]').forEach(el=>{
+   const l=el.getAttribute('data-loc');if(!l)return;
+   if(el.tagName==='IMG'||el.tagName==='VIDEO'){
+    el.src=l;const po=el.getAttribute('data-loc-poster');if(po)el.poster=po;
+   }else if(el.style){el.style.backgroundImage='url("'+l+'")'}
+ })}catch(e){}
+}
+function cdnEl(el){
+ if(!CDN_ON||!el||el.nodeType!==1||el.hasAttribute('data-loc'))return;
+ if(el.tagName==='IMG'||el.tagName==='VIDEO'){
+  const p=el.getAttribute('src');
+  if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.src=cdnU(p)}
+  const po=el.getAttribute('poster');
+  if(po&&po.indexOf('assets/')===0){el.setAttribute('data-loc-poster',po);el.poster=cdnU(po)}
+  el.addEventListener('error',cdnFail,{once:true});
+ }else if(el.hasAttribute('data-bg')){
+  const p=el.getAttribute('data-bg');
+  if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.style.backgroundImage=cdnBgUrl(p)}
+ }
+}
+function cdnScan(root){
+ if(!CDN_ON||!root||root.nodeType!==1)return;
+ cdnEl(root);
+ const list=root.querySelectorAll('img[src],video[src],[data-bg]');
+ for(let i=0;i<list.length;i++)cdnEl(list[i]);
+}
+if(window.MutationObserver){
+ const _mo=new MutationObserver(ms=>{for(const m of ms){for(const n of m.addedNodes){cdnScan(n)}}});
+ document.addEventListener('DOMContentLoaded',()=>_mo.observe(document.body,{childList:true,subtree:true}),{once:true});
+}
+/* ============================================================
    iPhone UI / 交互引擎（中文 · 微信 · 俄罗斯方块）
    ============================================================ */
 const $=s=>document.querySelector(s);
@@ -148,7 +189,7 @@ function updateIsland(){typeof updateCrumb==='function'&&updateCrumb();
  const on=nowSong>=0&&!PLAYER.paused&&!['music','lock','pin'].includes(view)&&!OV.querySelector('.np,.call,.viewer');
  const el=$('#island');if(el)el.classList.toggle('act',on);
  const ia=el&&el.querySelector('.ia');
- if(ia)ia.style.backgroundImage=(on&&nowSong>=0)?`url("${songs[nowSong].cover}")`:''}
+ if(ia)ia.style.backgroundImage=(on&&nowSong>=0)?cdnBgUrl(songs[nowSong].cover):''}
 
 /* ============================ 锁屏 / 密码 ============================ */
 function ncardHTML(n){
@@ -187,7 +228,7 @@ function pinPress(n,el){if(pincode.length>=4)return;el.classList.add('dn');setTi
 function pinCancelOrDel(){if(pincode){pincode=pincode.slice(0,-1);pinDots();return}pinCancel()}
 function pinCancel(){view='lock';const p=$('#pinL');p.animate([{opacity:1},{opacity:0,transform:'translateY(30px)'}],{duration:300}).onfinish=()=>p.style.display='none';
  const lk=$('#lkc');lk.getAnimations().forEach(a=>a.cancel());lk.style.pointerEvents='';lk.animate([{transform:'translateY(-120px)',opacity:0},{transform:'none',opacity:1}],{duration:450,easing:'cubic-bezier(.2,.9,.25,1)'});$('#wall').classList.remove('dim')}
-function unlock(){sfx('unlock');view='home';$('#wall').classList.remove('dim');$('#wall').style.backgroundImage='url(assets/wallpaper/home.jpg)';
+function unlock(){sfx('unlock');view='home';$('#wall').classList.remove('dim');$('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/home.jpg');
  LOCK.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>{LOCK.style.visibility='hidden';$('#pinL').style.display='none';$('#lkc').getAnimations().forEach(a=>a.cancel());$('#lkc').style.pointerEvents=''};
  renderHome();HOME.style.visibility='visible';HOME.animate([{transform:'scale(1.18)',opacity:0},{transform:'none',opacity:1}],{duration:560,easing:'cubic-bezier(.2,.9,.22,1)'});
  [...HOME.querySelectorAll('.app,.widget')].forEach((el,i)=>el.animate([{transform:'scale(.7)',opacity:0},{transform:'none',opacity:1}],{duration:520,delay:30+i*14,easing:'cubic-bezier(.2,1.1,.3,1)',fill:'backwards'}));
@@ -200,14 +241,14 @@ let prefetched=false;
 function prefetchKey(){
  if(prefetched)return;prefetched=true;
  const list=[CALL1,CALL2,MOMENT_COVER,'assets/wallpaper/home.jpg'];
- const go=()=>list.forEach(u=>{try{fetch(u,{cache:'force-cache'})}catch(e){}});
+ const go=()=>list.forEach(u=>{try{fetch(cdnU(u),{cache:'force-cache'})}catch(e){}});
  if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:2000});else setTimeout(go,800)}
 /* 进入朋友圈后再预取两条视频（此时用户很可能会点开） */
 let moPrefetched=false;
 function prefetchMomentVideos(){
  if(moPrefetched)return;moPrefetched=true;
  const list=MOMENTS.filter(m=>m.media&&m.media.t==='video').map(m=>m.media.src);
- const go=()=>list.forEach(u=>{try{fetch(u,{cache:'force-cache'})}catch(e){}});
+ const go=()=>list.forEach(u=>{try{fetch(cdnU(u),{cache:'force-cache'})}catch(e){}});
  if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:4000});else setTimeout(go,1500)}
 
 /* ============================ 主屏幕 ============================ */
@@ -340,7 +381,7 @@ function openMoVideo(src){
  d.innerHTML=`<video id="movV" src="${src}" playsinline autoplay loop preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000"></video>
   <div class="movtip" id="movtip">加载中…</div>`;
  d.onclick=()=>closeMoVideo();
- OV.appendChild(d);
+ cdnScan(d);OV.appendChild(d);
  const v=d.querySelector('video');
  const tip=d.querySelector('#movtip');
  mediaTip(v,tip,'轻点任意位置退出');
@@ -514,7 +555,7 @@ function renderCall(){
   ${callTop(MAIN)}
   <div class="csub" id="csub">${callState==='ring'?'手机':callState==='dialing'?'正在呼叫…':'00:00'}</div>
   <div class="cgridwrap" id="cbtns"></div>`;
- OV.appendChild(d);
+ cdnScan(d);OV.appendChild(d);
  renderCallBtns();
  d.animate([{opacity:0},{opacity:1}],{duration:260})}
 function renderCallBtns(){
@@ -675,14 +716,14 @@ function openViewer(n){viewerList=photoSections.flatMap(s=>s[1]);viewerIdx=viewe
   <div class="vb"><button onclick="event.stopPropagation();viewerStep(-1)">${G.chevLb}</button><span></span><button onclick="event.stopPropagation();viewerStep(1)">${G.chevRb}</button></div>
   <div class="movtip">轻点任意位置退出</div>`;
  d.onclick=()=>closeViewer();
- OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
+ cdnScan(d);OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
 function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;const img=$('#viewer .vi');if(img)img.src=photoSrc(viewerList[viewerIdx])}
 function closeViewer(){const v=$('#viewer');if(v)v.animate([{opacity:1},{opacity:0}],{duration:220}).onfinish=()=>v.remove()}
 function openViewerSrc(src){const d=document.createElement('div');d.className='viewer';d.id='viewer';
  d.innerHTML=`<div class="vbg"></div><img class="vi" src="${src}" style="inset:8% 0;height:84%;width:100%">
   <div class="movtip">轻点任意位置退出</div>`;
  d.onclick=()=>closeViewer();
- OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
+ cdnScan(d);OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
 
 /* --- 邮件 --- */
 VIEWS.mail=()=>({html:`<div class="nav"><button style="color:var(--blue);font-size:17px;justify-self:start;padding-left:8px">${t('edit')}</button><div class="nb-title"></div><span></span></div>
@@ -746,7 +787,7 @@ function openNP(){const d=document.createElement('div');d.className='np';d.id='n
   <div class="ctl"><span onclick="npStep(-1)">${G.bwdF.replace('<svg','<svg width="30" height="30"')}</span>
    <span onclick="togglePlay()" id="npbtn">${(PLAYER.paused?G.playF:G.pauseF).replace('<svg','<svg width="36" height="36"')}</span>
    <span onclick="npStep(1)">${G.fwdF.replace('<svg','<svg width="30" height="30"')}</span></div>`;
- OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:260});
+ cdnScan(d);OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:260});
  npDragInit(d);
  PLAYER.addEventListener('timeupdate',npTick)}
 function npStep(k){if(nowSong<0)return;
@@ -800,7 +841,7 @@ VIEWS.instagram=()=>({cls:'ig',html:`<div class="ig-h"><b>${IG_NAME}</b>${G.plus
 let reelsPrefetched=false;
 function prefetchReelsIdle(){
  if(reelsPrefetched)return;reelsPrefetched=true;
- const go=()=>{const r=reels[0];if(r)fetch(r.file,{cache:'force-cache'}).catch(()=>{})};
+ const go=()=>{const r=reels[0];if(r)fetch(cdnU(r.file),{cache:'force-cache'}).catch(()=>{})};
  if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:3000});else setTimeout(go,1200)}
 /* 给视频挂上缓冲进度提示：显示「加载中 xx%」，就绪后提示消失 */
 function mediaTip(v,tip,readyText){
@@ -828,7 +869,7 @@ function openReel(i){reelIdx=i;const r=reels[i];
   <div class="ract"><div><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z"/></svg>${r.likes}</div>
    <div>${G.comment}${r.comments}</div><div>${G.share}${r.shares}</div></div>
   <div class="rinfo"><div class="u"><img src="${avatarOf(ME)}" alt="">${IG_NAME}<span>关注</span></div>♫ 原声 · ${IG_NAME}</div>`;
- OV.appendChild(d);const rv=d.querySelector('video');rv.muted=false;
+ cdnScan(d);OV.appendChild(d);const rv=d.querySelector('video');rv.muted=false;
  const tip=document.createElement('div');tip.className='rtip';tip.textContent='加载中…';
  tip.style.cssText='position:absolute;bottom:96px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:12.5px;z-index:3;pointer-events:none';
  d.appendChild(tip);
@@ -1056,7 +1097,7 @@ VIEWS.tetris=()=>({cls:'tet',dark:true,html:`<div style="position:relative;width
 
 /* ============================ 启动 ============================ */
 function boot(){
- $('#wall').style.backgroundImage='url(assets/wallpaper/lock.jpg)';
+ $('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/lock.jpg');
  const st=loadState();
  if(st){
   try{todayChat=st.todayChat||[];replyStage=st.replyStage||0;mainUnread=st.mainUnread??0;unread=st.unread||unread;
@@ -1069,7 +1110,7 @@ function boot(){
   if(st.unlocked){
    view='home';sfx('unlock');
    LOCK.style.visibility='hidden';$('#pinL').style.display='none';
-   $('#wall').style.backgroundImage='url(assets/wallpaper/home.jpg)';
+   $('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/home.jpg');
    renderHome();HOME.style.visibility='visible';setStatus(true);
    if(nowSong>=0&&songs[nowSong])try{PLAYER.src=songs[nowSong].src}catch(e){}
    if(st.lastApp&&VIEWS[st.lastApp])setTimeout(()=>{
