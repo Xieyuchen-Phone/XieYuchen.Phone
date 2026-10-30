@@ -34,12 +34,23 @@ function cdnEl(el){
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.style.backgroundImage=cdnBgUrl(p)}
  }
 }
+/* 主动探测一次 CDN：不可达则整体回退，避免壁纸等背景图静默空白 */
+function cdnProbe(){
+ if(!CDN_ON)return;
+ const i=new Image();
+ i.onerror=()=>cdnFail();
+ i.src=cdnU('assets/wallpaper/lock.jpg');
+}
 function cdnHTML(html){
  if(!CDN_ON||!html)return html;
  return String(html)
   .replace(/src="(assets\/[^"]*)"/g,(m,p)=>'src="'+cdnU(p)+'" data-loc="'+p+'"')
   .replace(/poster="(assets\/[^"]*)"/g,(m,p)=>'poster="'+cdnU(p)+'" data-loc-poster="'+p+'"');
 }
+function setBg(el,p){
+ if(!el)return;el.setAttribute('data-loc',p);
+ el.style.backgroundImage=CDN_ON?cdnBgUrl(p):'url("'+p+'")';
+ if(!el.dataset.cdnBound){el.dataset.cdnBound='1';}}
 function cdnScan(root){
  if(!CDN_ON||!root||root.nodeType!==1)return;
  cdnEl(root);
@@ -48,7 +59,7 @@ function cdnScan(root){
 }
 if(window.MutationObserver){
  const _mo=new MutationObserver(ms=>{for(const m of ms){for(const n of m.addedNodes){cdnScan(n)}}});
- const _boot=()=>{cdnScan(document.body);_mo.observe(document.body,{childList:true,subtree:true})};
+ const _boot=()=>{cdnProbe();cdnScan(document.body);_mo.observe(document.body,{childList:true,subtree:true})};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_boot,{once:true});else _boot();
 }
 /* ============================================================
@@ -200,7 +211,7 @@ function updateIsland(){typeof updateCrumb==='function'&&updateCrumb();
  const on=nowSong>=0&&!PLAYER.paused&&!['music','lock','pin'].includes(view)&&!OV.querySelector('.np,.call,.viewer');
  const el=$('#island');if(el)el.classList.toggle('act',on);
  const ia=el&&el.querySelector('.ia');
- if(ia)ia.style.backgroundImage=(on&&nowSong>=0)?cdnBgUrl(songs[nowSong].cover):''}
+ if(ia)if(on&&nowSong>=0)setBg(ia,songs[nowSong].cover);else{ia.style.backgroundImage='';ia.removeAttribute('data-loc')}}
 
 /* ============================ 锁屏 / 密码 ============================ */
 function ncardHTML(n){
@@ -240,7 +251,7 @@ function pinPress(n,el){if(pincode.length>=4)return;el.classList.add('dn');setTi
 function pinCancelOrDel(){if(pincode){pincode=pincode.slice(0,-1);pinDots();return}pinCancel()}
 function pinCancel(){view='lock';const p=$('#pinL');p.animate([{opacity:1},{opacity:0,transform:'translateY(30px)'}],{duration:300}).onfinish=()=>p.style.display='none';
  const lk=$('#lkc');lk.getAnimations().forEach(a=>a.cancel());lk.style.pointerEvents='';lk.animate([{transform:'translateY(-120px)',opacity:0},{transform:'none',opacity:1}],{duration:450,easing:'cubic-bezier(.2,.9,.25,1)'});$('#wall').classList.remove('dim')}
-function unlock(){sfx('unlock');view='home';$('#wall').classList.remove('dim');$('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/home.jpg');
+function unlock(){sfx('unlock');view='home';$('#wall').classList.remove('dim');setBg($('#wall'),'assets/wallpaper/home.jpg');
  LOCK.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>{LOCK.style.visibility='hidden';$('#pinL').style.display='none';$('#lkc').getAnimations().forEach(a=>a.cancel());$('#lkc').style.pointerEvents=''};
  renderHome();HOME.style.visibility='visible';HOME.animate([{transform:'scale(1.18)',opacity:0},{transform:'none',opacity:1}],{duration:560,easing:'cubic-bezier(.2,.9,.22,1)'});
  [...HOME.querySelectorAll('.app,.widget')].forEach((el,i)=>el.animate([{transform:'scale(.7)',opacity:0},{transform:'none',opacity:1}],{duration:520,delay:30+i*14,easing:'cubic-bezier(.2,1.1,.3,1)',fill:'backwards'}));
@@ -1110,7 +1121,7 @@ VIEWS.tetris=()=>({cls:'tet',dark:true,html:`<div style="position:relative;width
 
 /* ============================ 启动 ============================ */
 function boot(){
- $('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/lock.jpg');
+ setBg($('#wall'),'assets/wallpaper/lock.jpg');
  const st=loadState();
  if(st){
   try{todayChat=st.todayChat||[];replyStage=st.replyStage||0;mainUnread=st.mainUnread??0;unread=st.unread||unread;
@@ -1123,7 +1134,7 @@ function boot(){
   if(st.unlocked){
    view='home';sfx('unlock');
    LOCK.style.visibility='hidden';$('#pinL').style.display='none';
-   $('#wall').style.backgroundImage=cdnBgUrl('assets/wallpaper/home.jpg');
+   setBg($('#wall'),'assets/wallpaper/home.jpg');
    renderHome();HOME.style.visibility='visible';setStatus(true);
    if(nowSong>=0&&songs[nowSong])try{PLAYER.src=songs[nowSong].src}catch(e){}
    if(st.lastApp&&VIEWS[st.lastApp])setTimeout(()=>{
