@@ -597,22 +597,9 @@ svg{display:block}
  <div id="hb" class="light" aria-label="回到主屏幕"><i></i></div>
 </div>
 <audio id="player" preload="auto"></audio>
-<script>
-/* 代码默认走 jsDelivr CDN（实测比 GitHub Pages 直连快约 240 倍），失败自动回退站内文件 */
-(function(){
- /* JS 锚定到具体 commit：内容即最终版，CDN 永久缓存且必定一致 */
- var CDN='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@f99fe734b5b76c272209f7465964ff2237143a7b/';
- var files=['ui.js','data.js','app.js'],i=0,cdnOK=true;
- function add(f){
-  var s=document.createElement('script');s.src=f;
-  s.onload=function(){next()};
-  s.onerror=function(){s.remove();if(cdnOK){cdnOK=false;add(f.replace(CDN,''))}};
-  document.head.appendChild(s);
- }
- function next(){if(i>=files.length)return;add((cdnOK?CDN:'')+files[i++]+'?v=7')}
- next();
-})();
-</script>
+<script src="ui.js?v=8"></script>
+<script src="data.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
 <style>
