@@ -752,28 +752,50 @@ VIEWS.weather=()=>{const W=WEATHER;
 
 /* --- 照片 --- */
 VIEWS.photos=()=>{
- const secs=photoSections.map(([name,list])=>`<div class="ph-sec">${esc(name)}</div><div class="ph-grid">${list.map(n=>`<button onclick="openViewer(${n})"><img src="${photoSrc(n)}" alt="" loading="lazy"></button>`).join('')}</div>`).join('');
+ const secs=photoSections.map(([name,list])=>`<div class="ph-sec">${esc(name)}</div><div class="ph-grid">${list.map(n=>`<button onclick="openViewer(${n})"><img src="${photoThumb(n)}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>`).join('');
  return{html:`<div class="nav solid"><span></span><div class="nb-title"></div><span></span></div>
   <div class="scroll" style="padding-top:100px">${secs}</div>
   <div class="phtabs"><button class="on">${t('library')}</button><button>${t('years')}</button><button>${t('months')}</button></div>`}};
 let viewerIdx=0,viewerList=[];
+/* 原图在后台加载，就绪后自动替换缩略图：点开／翻看都是即时出图，不白屏不等待 */
+function viewerLoadFull(n){
+ const full=cdnU(photoSrc(n));
+ const pre=new Image();
+ pre.onload=()=>viewerSwap(n,full);
+ pre.onerror=()=>{viewerSwap(n,photoSrc(n));const t=$('#viewer .vi');if(t)cdnNoteFail(t)};
+ pre.src=full;
+ viewerPreload();
+}
+function viewerSwap(n,url){
+ const t=$('#viewer .vi');
+ if(t&&t.getAttribute('data-n')==String(n))t.src=url;   /* 已翻到别张则丢弃这次结果 */
+}
+function viewerSetThumb(img,n){
+ img.setAttribute('data-n',n);
+ img.setAttribute('data-loc',photoThumb(n));
+ img.onerror=function(){if(this.src.indexOf('jsdelivr')>=0){this.onerror=null;this.src=this.getAttribute('data-loc');cdnNoteFail(this)}};
+ img.src=cdnU(photoThumb(n));   /* 网格里已缓存，同步显示，翻看零延迟 */
+}
 function openViewer(n){viewerList=photoSections.flatMap(s=>s[1]);viewerIdx=viewerList.indexOf(n);
  const d=document.createElement('div');d.className='viewer';d.id='viewer';
- d.innerHTML=`<div class="vbg"></div><img class="vi" src="${photoSrc(n)}" style="inset:8% 0;height:84%;width:100%">
+ d.innerHTML=`<div class="vbg"></div><img class="vi" src="${cdnU(photoThumb(n))}" data-loc="${photoThumb(n)}" data-n="${n}" style="inset:8% 0;height:84%;width:100%">
   <div class="vb"><button onclick="event.stopPropagation();viewerStep(-1)">${G.chevLb}</button><span></span><button onclick="event.stopPropagation();viewerStep(1)">${G.chevRb}</button></div>
   <div class="movtip">轻点任意位置退出</div>`;
- d.onclick=()=>closeViewer();
- cdnScan(d);OV.appendChild(d);viewerPreload();d.animate([{opacity:0},{opacity:1}],{duration:250})}
+ d.onclick=()=>{if(d.dataset.swiped)return;closeViewer()};
+ /* 左右滑动翻看：位移超过 45px 判定为滑动，滑动后不触发关闭 */
+ let sx=0,sy=0,sd=false;
+ d.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;sd=true},{passive:true});
+ d.addEventListener('pointerup',e=>{if(!sd)return;sd=false;
+  const dx=e.clientX-sx,dy=e.clientY-sy;
+  if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)){d.dataset.swiped='1';viewerStep(dx<0?1:-1);setTimeout(()=>{d.dataset.swiped=''},80)}
+ },{passive:true});
+ OV.appendChild(d);cdnScan(d);viewerLoadFull(n);d.animate([{opacity:0},{opacity:1}],{duration:250})}
 function viewerStep(k){
  viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;
+ const n=viewerList[viewerIdx];
  const img=$('#viewer .vi');if(!img)return;
- const url=cdnU(photoSrc(viewerList[viewerIdx]));
- const pre=new Image();
- /* 先加载完再换 src：切换过程中旧图保留，不会白屏，翻看手感连续 */
- pre.onload=()=>{const t=$('#viewer .vi');if(t)t.src=url};
- pre.onerror=()=>{const t=$('#viewer .vi');if(t){t.src=photoSrc(viewerList[viewerIdx]);cdnNoteFail(t)}};
- pre.src=url;
- viewerPreload();
+ viewerSetThumb(img,n);
+ viewerLoadFull(n);
 }
 /* 预取前后各两张，左右翻看几乎无等待 */
 function viewerPreload(){

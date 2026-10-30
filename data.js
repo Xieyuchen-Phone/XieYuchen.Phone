@@ -963,6 +963,8 @@ const photoSections=[
  ['2',[10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]],
 ];
 const photoSrc=n=>`assets/photos/${n}.jpg`;
+/* 网格专用缩略图：26 张原图共 3.4MB，缩略图仅 0.67MB，网格加载快 5 倍 */
+const photoThumb=n=>`assets/photos/th/${n}.jpg`;
 
 /* ---------- 地图 ---------- */
 const MAP_PLACES=[
