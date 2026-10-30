@@ -343,8 +343,7 @@ function openMoVideo(src){
  OV.appendChild(d);
  const v=d.querySelector('video');
  const tip=d.querySelector('#movtip');
- const ready=()=>{if(tip)tip.textContent='轻点任意位置退出'};
- if(v.readyState>=3)ready();else{v.addEventListener('canplay',ready,{once:true});v.addEventListener('loadeddata',ready,{once:true})}
+ mediaTip(v,tip,'轻点任意位置退出');
  v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})});
  d.animate([{opacity:0},{opacity:1}],{duration:240})}
 function closeMoVideo(){const m=$('#movUI');if(!m)return;const v=m.querySelector('video');if(v)v.pause();
@@ -795,7 +794,31 @@ VIEWS.instagram=()=>({cls:'ig',html:`<div class="ig-h"><b>${IG_NAME}</b>${G.plus
    return `<button onclick="openReel(${i})"><img src="${po}" alt="" loading="lazy">
    <span class="vc" style="left:auto;right:7px;top:6px;bottom:auto">${G.reels}</span></button>`}).join('')}</div>
  </div>
- ${tabbar([['home','首页'],['search','搜索'],['reels','Reels'],['bag','商店'],['person','我的']],0,'')}`});
+ ${tabbar([['home','首页'],['search','搜索'],['reels','Reels'],['bag','商店'],['person','我的']],0,'')}`,
+ init:()=>prefetchReelsIdle()});
+/* 打开 INS 主页后空闲时悄悄预取第一条 Reel，点开即可秒播 */
+let reelsPrefetched=false;
+function prefetchReelsIdle(){
+ if(reelsPrefetched)return;reelsPrefetched=true;
+ const go=()=>{const r=reels[0];if(r)fetch(r.file,{cache:'force-cache'}).catch(()=>{})};
+ if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:3000});else setTimeout(go,1200)}
+/* 给视频挂上缓冲进度提示：显示「加载中 xx%」，就绪后提示消失 */
+function mediaTip(v,tip,readyText){
+ let done=false;
+ const finish=()=>{if(done)return;done=true;if(readyText){tip.textContent=readyText;setTimeout(()=>{if(tip.isConnected)tip.style.display='none'},1400)}else{tip.style.display='none'}};
+ const prog=()=>{
+  if(done||!v.buffered||!v.buffered.length||!v.duration)return;
+  const p=Math.min(99,Math.round(v.buffered.end(v.buffered.length-1)/v.duration*100));
+  tip.textContent='加载中 '+p+'%'};
+ const show=()=>{if(!done&&v.readyState<3)prog()};
+ if(v.readyState>=3)finish();
+ else{
+  v.addEventListener('canplay',finish,{once:true});
+  v.addEventListener('loadeddata',show,{once:true});
+  v.addEventListener('progress',show);
+  v.addEventListener('waiting',show);
+ }
+ return finish}
 function openReel(i){reelIdx=i;const r=reels[i];
  const d=document.createElement('div');d.className='pg reel';d.id='reelUI';
  const po=r.file.replace('reels/','posters/').replace('.mp4','.jpg');
@@ -806,6 +829,11 @@ function openReel(i){reelIdx=i;const r=reels[i];
    <div>${G.comment}${r.comments}</div><div>${G.share}${r.shares}</div></div>
   <div class="rinfo"><div class="u"><img src="${avatarOf(ME)}" alt="">${IG_NAME}<span>关注</span></div>♫ 原声 · ${IG_NAME}</div>`;
  OV.appendChild(d);const rv=d.querySelector('video');rv.muted=false;
+ const tip=document.createElement('div');tip.className='rtip';tip.textContent='加载中…';
+ tip.style.cssText='position:absolute;bottom:96px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:12.5px;z-index:3;pointer-events:none';
+ d.appendChild(tip);
+ const ok=()=>{tip.textContent='';tip.style.display='none'};
+ mediaTip(rv,tip,'');
  rv.play().catch(()=>{rv.muted=true;const b=$('#rvol');if(b)b.innerHTML=G.muteF;rv.play().catch(()=>{})});
  d.animate([{opacity:0},{opacity:1}],{duration:250})}
 function toggleReelVol(){const rv=$('#reelVid'),b=$('#rvol');if(!rv)return;rv.muted=!rv.muted;if(b)b.innerHTML=rv.muted?G.muteF:G.speaker}
