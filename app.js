@@ -191,9 +191,24 @@ function unlock(){sfx('unlock');view='home';$('#wall').classList.remove('dim');$
  LOCK.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>{LOCK.style.visibility='hidden';$('#pinL').style.display='none';$('#lkc').getAnimations().forEach(a=>a.cancel());$('#lkc').style.pointerEvents=''};
  renderHome();HOME.style.visibility='visible';HOME.animate([{transform:'scale(1.18)',opacity:0},{transform:'none',opacity:1}],{duration:560,easing:'cubic-bezier(.2,.9,.22,1)'});
  [...HOME.querySelectorAll('.app,.widget')].forEach((el,i)=>el.animate([{transform:'scale(.7)',opacity:0},{transform:'none',opacity:1}],{duration:520,delay:30+i*14,easing:'cubic-bezier(.2,1.1,.3,1)',fill:'backwards'}));
- setStatus(true);saveState();
+ setStatus(true);saveState();prefetchKey();
  if(chatId===MAIN&&replyStage===0&&!todayChat.length)setTimeout(()=>deliver(liveRounds[0].them[0]),900);
  if(pendingOpen==='wechat'){pendingOpen=null;setTimeout(()=>{chatId=MAIN;openApp('wechat',HOME.querySelector('.app[data-app="wechat"] .icon'))},520)}}
+
+/* 解锁后预取轻量关键资源：来电语音等（不占大带宽） */
+let prefetched=false;
+function prefetchKey(){
+ if(prefetched)return;prefetched=true;
+ const list=[CALL1,CALL2,MOMENT_COVER,'assets/wallpaper/home.jpg'];
+ const go=()=>list.forEach(u=>{try{fetch(u,{cache:'force-cache'})}catch(e){}});
+ if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:2000});else setTimeout(go,800)}
+/* 进入朋友圈后再预取两条视频（此时用户很可能会点开） */
+let moPrefetched=false;
+function prefetchMomentVideos(){
+ if(moPrefetched)return;moPrefetched=true;
+ const list=MOMENTS.filter(m=>m.media&&m.media.t==='video').map(m=>m.media.src);
+ const go=()=>list.forEach(u=>{try{fetch(u,{cache:'force-cache'})}catch(e){}});
+ if('requestIdleCallback' in window)requestIdleCallback(go,{timeout:4000});else setTimeout(go,1500)}
 
 /* ============================ 主屏幕 ============================ */
 const PAGE1_APPS=['instagram','photos','mail','calendar','clock','notes','weather','settings','maps','tetris'];
@@ -322,11 +337,14 @@ function likesHTML(id){const lk=(momentLikes[id]||[]).map(moName);
 /* --- 朋友圈视频：点击放大观看，再次点击退出 --- */
 function openMoVideo(src){
  const d=document.createElement('div');d.className='pg movv';d.id='movUI';
- d.innerHTML=`<video id="movV" src="${src}" playsinline autoplay loop style="width:100%;height:100%;object-fit:contain;background:#000"></video>
-  <div class="movtip">轻点任意位置退出</div>`;
+ d.innerHTML=`<video id="movV" src="${src}" playsinline autoplay loop preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000"></video>
+  <div class="movtip" id="movtip">加载中…</div>`;
  d.onclick=()=>closeMoVideo();
  OV.appendChild(d);
  const v=d.querySelector('video');
+ const tip=d.querySelector('#movtip');
+ const ready=()=>{if(tip)tip.textContent='轻点任意位置退出'};
+ if(v.readyState>=3)ready();else{v.addEventListener('canplay',ready,{once:true});v.addEventListener('loadeddata',ready,{once:true})}
  v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})});
  d.animate([{opacity:0},{opacity:1}],{duration:240})}
 function closeMoVideo(){const m=$('#movUI');if(!m)return;const v=m.querySelector('video');if(v)v.pause();
@@ -335,7 +353,7 @@ function phMedia(label){return `<div class="mmph">${esc(label||'[图片]')}</div
 function momentMedia(m){
  if(!m.media)return '';
  const md=m.media;
- if(md.t==='video')return `<div class="mmv" onclick="openMoVideo('${md.src}')"><video src="${md.src}" poster="${md.poster||''}" playsinline preload="metadata" onerror="this.closest('.mmv').outerHTML=phMedia('${md.label||''}')"></video><span class="mmplay"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5Z" fill="#fff"/></svg></span></div>`;
+ if(md.t==='video')return `<div class="mmv" onclick="openMoVideo('${md.src}')"><video src="${md.src}" poster="${md.poster||''}" playsinline preload="none" onerror="this.closest('.mmv').outerHTML=phMedia('${md.label||''}')"></video><span class="mmplay"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5Z" fill="#fff"/></svg></span></div>`;
  return `<div class="mmi"><img src="${md.src}" loading="lazy" onclick="event.stopPropagation();openViewerSrc('${md.src}',this)" onerror="this.parentElement.outerHTML=phMedia('${md.label||''}')"></div>`}
 function momentHTML(m){
  const who=moName(m.who),av=avatarOf(who)||'';
@@ -369,7 +387,7 @@ VIEWS.discover=()=>({cls:'wxapp',html:`<div class="wx-h"><span class="wx-l"></sp
  </div></div>
  ${wxTabbar(2)}`})
 VIEWS.moments=()=>{
- ensureMomentLikes();
+ ensureMomentLikes();prefetchMomentVideos();
  return{cls:'moapp',html:`<div class="mo-nav"><button class="mo-bk" onclick="back()">${G.chevL}</button><span class="mo-cam">${G.camera}</span></div>
  <div class="mo-scroll" id="moscroll">
   <div class="mo-cov"><img src="${MOMENT_COVER}" alt="" onclick="openViewerSrc('${MOMENT_COVER}',this)"></div>
@@ -780,7 +798,8 @@ VIEWS.instagram=()=>({cls:'ig',html:`<div class="ig-h"><b>${IG_NAME}</b>${G.plus
  ${tabbar([['home','首页'],['search','搜索'],['reels','Reels'],['bag','商店'],['person','我的']],0,'')}`});
 function openReel(i){reelIdx=i;const r=reels[i];
  const d=document.createElement('div');d.className='pg reel';d.id='reelUI';
- d.innerHTML=`<div class="vwrap"><video id="reelVid" src="${r.file}" playsinline autoplay loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:${r.vertical?'cover':'contain'};background:#000"></video></div>
+ const po=r.file.replace('reels/','posters/').replace('.mp4','.jpg');
+ d.innerHTML=`<div class="vwrap"><video id="reelVid" src="${r.file}" poster="${po}" playsinline autoplay loop preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:${r.vertical?'cover':'contain'};background:#000"></video></div>
   <button class="rvol" id="rvol" onclick="toggleReelVol()">${G.speaker}</button>
   <div class="rtop"><button class="rback" onclick="closeReel()">${G.chevL}</button><span>Reels</span>${G.dotsH}</div>
   <div class="ract"><div><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z"/></svg>${r.likes}</div>
