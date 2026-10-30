@@ -761,8 +761,26 @@ function openViewer(n){viewerList=photoSections.flatMap(s=>s[1]);viewerIdx=viewe
   <div class="vb"><button onclick="event.stopPropagation();viewerStep(-1)">${G.chevLb}</button><span></span><button onclick="event.stopPropagation();viewerStep(1)">${G.chevRb}</button></div>
   <div class="movtip">轻点任意位置退出</div>`;
  d.onclick=()=>closeViewer();
- cdnScan(d);OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
-function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;const img=$('#viewer .vi');if(img)img.src=cdnU(photoSrc(viewerList[viewerIdx]))}
+ cdnScan(d);OV.appendChild(d);viewerPreload();d.animate([{opacity:0},{opacity:1}],{duration:250})}
+function viewerStep(k){
+ viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;
+ const img=$('#viewer .vi');if(!img)return;
+ const url=cdnU(photoSrc(viewerList[viewerIdx]));
+ const pre=new Image();
+ /* 先加载完再换 src：切换过程中旧图保留，不会白屏，翻看手感连续 */
+ pre.onload=()=>{const t=$('#viewer .vi');if(t)t.src=url};
+ pre.onerror=()=>{const t=$('#viewer .vi');if(t)t.src=url};
+ pre.src=url;
+ viewerPreload();
+}
+/* 预取前后各两张，左右翻看几乎无等待 */
+function viewerPreload(){
+ if(!viewerList||!viewerList.length)return;
+ [1,-1,2,-2].forEach(k=>{
+  const n=viewerList[(viewerIdx+k+viewerList.length)%viewerList.length];
+  const i=new Image();i.src=cdnU(photoSrc(n));
+ });
+}
 function closeViewer(){const v=$('#viewer');if(v)v.animate([{opacity:1},{opacity:0}],{duration:220}).onfinish=()=>v.remove()}
 function openViewerSrc(src){const d=document.createElement('div');d.className='viewer';d.id='viewer';
  d.innerHTML=`<div class="vbg"></div><img class="vi" src="${src}" style="inset:8% 0;height:84%;width:100%">
