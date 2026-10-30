@@ -19,7 +19,10 @@ function cdnFail(){
  })}catch(e){}
 }
 function cdnEl(el){
- if(!CDN_ON||!el||el.nodeType!==1||el.hasAttribute('data-loc'))return;
+ if(!CDN_ON||!el||el.nodeType!==1)return;
+ if(el.hasAttribute('data-loc')){
+  if(!el.dataset.cdnBound){el.dataset.cdnBound='1';el.addEventListener('error',cdnFail,{once:true})}
+  return}
  if(el.tagName==='IMG'||el.tagName==='VIDEO'){
   const p=el.getAttribute('src');
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.src=cdnU(p)}
@@ -30,6 +33,12 @@ function cdnEl(el){
   const p=el.getAttribute('data-bg');
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.style.backgroundImage=cdnBgUrl(p)}
  }
+}
+function cdnHTML(html){
+ if(!CDN_ON||!html)return html;
+ return String(html)
+  .replace(/src="(assets\/[^"]*)"/g,(m,p)=>'src="'+cdnU(p)+'" data-loc="'+p+'"')
+  .replace(/poster="(assets\/[^"]*)"/g,(m,p)=>'poster="'+cdnU(p)+'" data-loc-poster="'+p+'"');
 }
 function cdnScan(root){
  if(!CDN_ON||!root||root.nodeType!==1)return;
@@ -204,11 +213,11 @@ function renderLock(){
   {title:'齐',body:'下雨了',app:'wechat',time:t('now')},
   {title:bd.label,body:`${bd.date} · 还有 ${bd.days} 天`,app:'rem',time:t('now')},
  ];
- $('#lkc').innerHTML=`<div class="lk-date">${fmtLockDate()}</div><div class="lk-time" id="lkt">${clock12()}</div>
+ $('#lkc').innerHTML=cdnHTML(`<div class="lk-date">${fmtLockDate()}</div><div class="lk-time" id="lkt">${clock12()}</div>
  <div class="lk-notes">${lockNotes.map((n,i)=>`<button class="ncard" onclick="lockNoteTap(${i},event)">${ncardHTML(n)}</button>`).join('')}</div>
  <button class="lk-btn" style="left:46px" onclick="event.stopPropagation();this.animate([{transform:'scale(1.2)'},{transform:'none'}],250)">${G.flash.replace('<svg','<svg width="24" height="24" style="color:#fff"')}</button>
  <button class="lk-btn" style="right:46px" onclick="event.stopPropagation();this.animate([{transform:'scale(1.2)'},{transform:'none'}],250)">${G.camera.replace('<svg','<svg width="24" height="24" style="color:#fff"')}</button>
- <div class="lk-hint">${t('swipeUp')}</div>`;
+ <div class="lk-hint">${t('swipeUp')}</div>`);
  cdnScan($('#lkc'))}
 function lockNoteTap(i,e){e.stopPropagation();if(lockNotes[i].app==='wechat'){pendingOpen='wechat';mainUnread=0;saveState()}goPin()}
 (function lockDrag(){const el=$('#lkc');let y0=null,dy=0,moved=false;
@@ -263,7 +272,7 @@ function badgeOf(id){
 function appBtn(id){const b=badgeOf(id);return `<button class="app" data-app="${id}" onclick="openApp('${id}',this.firstElementChild)"><div class="icon"><div class="ic">${appIcon(id)}</div>${b?`<span class="bdg">${b}</span>`:''}</div><span class="lbl">${APPS[id]}</span></button>`}
 function renderHome(){
  const evToday=(events[TODAY.m]||{})[TODAY.d]||[];
- HOME.innerHTML=`
+ HOME.innerHTML=cdnHTML(`
  <div class="hpage" id="hp0" style="transform:translateX(${homePage===0?0:-100}%)">
   <div class="hgrid">
    <button class="widget wcal" onclick="openApp('calendar',this)"><div class="wd">${wdLong(TODAY.y,TODAY.m,TODAY.d)}</div><div class="wn">${TODAY.d}</div>${evToday.map(x=>`<div class="we">${esc(x)}<small>${t('allDay')}</small></div>`).join('')||'<div class="we">复查<small>全天</small></div>'}</button>
@@ -273,7 +282,7 @@ function renderHome(){
  </div>
  <div class="hpage" id="hp1" style="transform:translateX(${homePage===1?0:100}%)"></div>
  <div class="hdots"><i class="${homePage===0?'on':''}"></i><i class="${homePage===1?'on':''}"></i></div>
- <div class="dock">${['phone','safari','wechat','music'].map(appBtn).join('')}</div>`;
+ <div class="dock">${['phone','safari','wechat','music'].map(appBtn).join('')}</div>`);
  cdnScan(HOME);
  HOME.querySelectorAll('.hgrid,.hpage').forEach(el=>el.animate([{opacity:.99},{opacity:1}],{duration:1}));
  bindHomeSwipe()}
@@ -300,7 +309,7 @@ function wireScroll(pg){const sc=pg.querySelector('.scroll');if(sc)sc.addEventLi
 function show(id,anim='swap'){
  const old=[...APP.children];old.forEach(o=>{o.querySelectorAll('video').forEach(v=>v.pause())});
  if(PLAYER.dataset.voice&&!(id==='chat')){PLAYER.pause()}
- view=id;const v=VIEWS[id]();const pg=document.createElement('div');pg.className='pg '+(v.cls||'');pg.innerHTML=v.html;cdnScan(pg);pg.dataset.view=id;pg.dataset.dark=v.dark?'1':'';
+ view=id;const v=VIEWS[id]();const pg=document.createElement('div');pg.className='pg '+(v.cls||'');pg.innerHTML=cdnHTML(v.html);cdnScan(pg);pg.dataset.view=id;pg.dataset.dark=v.dark?'1':'';
  if(anim==='pop')APP.insertBefore(pg,APP.firstChild);else APP.appendChild(pg);
  setStatus(v.dark);wireScroll(pg);
  const done=()=>old.forEach(o=>o.remove());
