@@ -612,7 +612,7 @@ let ringIv=null;
 function stopRing(){if(ringIv){clearInterval(ringIv);ringIv=null}}
 function acceptCall(){
  stopRing();callState='active';renderCallBtns();
- const src=(callStage===0)?CALL1:CALL2;
+ const src=cdnU((callStage===0)?CALL1:CALL2);
  callAudio=new Audio(src);callAudio.play().catch(()=>{});
  const sub=$('#csub');let sec=0;
  callTimer=setInterval(()=>{sec++;if(sub)sub.textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000);
@@ -635,7 +635,7 @@ function dial(name){
   callState='dialing';renderCall();
   setTimeout(()=>{if(callState!=='dialing')return;callState='active';renderCallBtns();
    const sub=$('#csub');if(sub)sub.textContent='00:00';
-   const src=CALL2;callAudio=new Audio(src);callAudio.play().catch(()=>{});
+   const src=cdnU(CALL2);callAudio=new Audio(src);callAudio.play().catch(()=>{});
    let sec=0;callTimer=setInterval(()=>{sec++;const s2=$('#csub');if(s2)s2.textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000);
    callAudio.onended=()=>setTimeout(endCall,600)},2000);
   return}
@@ -787,8 +787,8 @@ VIEWS.safsearch=()=>({cls:'saf',html:`<div class="scroll">
 /* --- 音乐 --- */
 function playSong(i){
  if(nowSong===i&&!PLAYER.paused){PLAYER.pause();updateIsland();if(view==='music')show('music');return}
- nowSong=i;PLAYER.src=songs[i].src;PLAYER.dataset.voice='';PLAYER.play().catch(()=>{});
- PLAYER.onended=()=>{nowSong=(nowSong+1)%songs.length;PLAYER.src=songs[nowSong].src;PLAYER.play().catch(()=>{})};
+ nowSong=i;PLAYER.src=cdnU(songs[i].src);PLAYER.dataset.voice='';PLAYER.play().catch(()=>{});
+ PLAYER.onended=()=>{nowSong=(nowSong+1)%songs.length;PLAYER.src=cdnU(songs[nowSong].src);PLAYER.play().catch(()=>{})};
  PLAYER.onpause=()=>updateIsland();PLAYER.onplay=()=>updateIsland();
  updateIsland();if(view==='music')show('music')}
 VIEWS.music=()=>{
@@ -803,7 +803,7 @@ VIEWS.music=()=>{
   ${nowSong>=0?`<div class="mini" onclick="openNP()"><span class="art"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></span><b>${esc(songs[nowSong].title)}</b><span class="mbtn" onclick="event.stopPropagation();togglePlay()">${playing?G.pauseF.replace('<svg','<svg width="22" height="22"'):G.playF.replace('<svg','<svg width="22" height="22"')}</span></div>`:''}`}};
 function shufflePlay(){let i=Math.floor(Math.random()*songs.length);
  if(songs.length>1&&i===nowSong)i=(i+1+Math.floor(Math.random()*(songs.length-1)))%songs.length;
- nowSong=i;PLAYER.src=songs[i].src;PLAYER.play().catch(()=>{});updateIsland();if(view==='music')show('music')}
+ nowSong=i;PLAYER.src=cdnU(songs[i].src);PLAYER.play().catch(()=>{});updateIsland();if(view==='music')show('music')}
 function openNP(){const d=document.createElement('div');d.className='np';d.id='np';
  d.innerHTML=`<div class="npgrab"><i class="grab"></i></div><div class="bigart"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></div>
   <div class="ti">${esc(songs[nowSong].title)}<small>${esc(songs[nowSong].artist)}</small></div>
@@ -816,7 +816,7 @@ function openNP(){const d=document.createElement('div');d.className='np';d.id='n
  PLAYER.addEventListener('timeupdate',npTick)}
 function npStep(k){if(nowSong<0)return;
  nowSong=(nowSong+k+songs.length)%songs.length;
- PLAYER.src=songs[nowSong].src;PLAYER.play().catch(()=>{});
+ PLAYER.src=cdnU(songs[nowSong].src);PLAYER.play().catch(()=>{});
  saveState();updateIsland();npRefresh();if(view==='music')show('music')}
 function npRefresh(){const d=$('#np');if(!d)return;const s=songs[nowSong];
  const img=d.querySelector('.bigart img');if(img)img.src=s.cover;
@@ -1136,7 +1136,7 @@ function boot(){
    LOCK.style.visibility='hidden';$('#pinL').style.display='none';
    setBg($('#wall'),'assets/wallpaper/home.jpg');
    renderHome();HOME.style.visibility='visible';setStatus(true);
-   if(nowSong>=0&&songs[nowSong])try{PLAYER.src=songs[nowSong].src}catch(e){}
+   if(nowSong>=0&&songs[nowSong])try{PLAYER.src=cdnU(songs[nowSong].src)}catch(e){}
    if(st.lastApp&&VIEWS[st.lastApp])setTimeout(()=>{
     APP.innerHTML='';lastAppId=st.lastApp;show(st.lastApp,'none');APP.style.visibility='visible';HOME.style.visibility='hidden';
     const cv=st.curView;
