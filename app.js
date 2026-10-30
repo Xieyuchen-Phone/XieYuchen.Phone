@@ -708,7 +708,7 @@ function playSong(i){
 VIEWS.music=()=>{
  const playing=nowSong>=0&&!PLAYER.paused;
  return{html:navHTML({title:'',back:t('library')})+
- `<div class="scroll" style="padding-top:104px"><h1 class="lt">${t('songs')}</h1>
+ `<div class="scroll" style="padding-top:104px;padding-bottom:104px"><h1 class="lt">${t('songs')}</h1>
   <div class="mact"><button onclick="playSong(${Math.floor(Math.random()*songs.length)})">${G.playF.replace('<svg','<svg width="19" height="19"')}<span>${t('play')}</span></button>
   <button onclick="shufflePlay()">${G.shuffleIco.replace('<svg','<svg width="22" height="22"')}<span>${t('shuffle')}</span></button></div>
   <div class="group">${songs.map((s,i)=>`<button class="mrow" onclick="playSong(${i})">
@@ -719,14 +719,39 @@ function shufflePlay(){let i=Math.floor(Math.random()*songs.length);
  if(songs.length>1&&i===nowSong)i=(i+1+Math.floor(Math.random()*(songs.length-1)))%songs.length;
  nowSong=i;PLAYER.src=songs[i].src;PLAYER.play().catch(()=>{});updateIsland();if(view==='music')show('music')}
 function openNP(){const d=document.createElement('div');d.className='np';d.id='np';
- d.innerHTML=`<div class="grab"></div><div class="bigart"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></div>
+ d.innerHTML=`<div class="npgrab"><i class="grab"></i></div><div class="bigart"><img src="${songs[nowSong].cover}" alt="" onerror="this.style.display='none'"></div>
   <div class="ti">${esc(songs[nowSong].title)}<small>${esc(songs[nowSong].artist)}</small></div>
   <div class="bar"><i style="width:0" id="npbar"></i></div><div class="tt"><span>0:00</span><span>--:--</span></div>
-  <div class="ctl">${G.bwdF.replace('<svg','<svg width="30" height="30"')}
+  <div class="ctl"><span onclick="npStep(-1)">${G.bwdF.replace('<svg','<svg width="30" height="30"')}</span>
    <span onclick="togglePlay()" id="npbtn">${(PLAYER.paused?G.playF:G.pauseF).replace('<svg','<svg width="36" height="36"')}</span>
-   ${G.fwdF.replace('<svg','<svg width="30" height="30"')}</div>`;
+   <span onclick="npStep(1)">${G.fwdF.replace('<svg','<svg width="30" height="30"')}</span></div>`;
  OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:260});
+ npDragInit(d);
  PLAYER.addEventListener('timeupdate',npTick)}
+function npStep(k){if(nowSong<0)return;
+ nowSong=(nowSong+k+songs.length)%songs.length;
+ PLAYER.src=songs[nowSong].src;PLAYER.play().catch(()=>{});
+ saveState();updateIsland();npRefresh();if(view==='music')show('music')}
+function npRefresh(){const d=$('#np');if(!d)return;const s=songs[nowSong];
+ const img=d.querySelector('.bigart img');if(img)img.src=s.cover;
+ const ti=d.querySelector('.ti');if(ti)ti.innerHTML=esc(s.title)+'<small>'+esc(s.artist)+'</small>';
+ const bt=$('#npbtn');if(bt)bt.innerHTML=((PLAYER.paused?G.playF:G.pauseF).replace('<svg','<svg width="36" height="36"'));
+ const bar=$('#npbar');if(bar)bar.style.width='0';
+ const tt=d.querySelectorAll('.tt span');if(tt[0])tt[0].textContent='0:00';if(tt[1])tt[1].textContent='--:--'}
+/* 顶部横条下拉关闭详情页 */
+function npDragInit(d){const g=d.querySelector('.npgrab');if(!g)return;
+ let sy=0,dy=0,drag=false;
+ const cy=e=>e.touches?e.touches[0].clientY:e.clientY;
+ const down=e=>{drag=true;sy=cy(e);dy=0;d.style.transition='none';if(e.pointerId!==undefined&&d.setPointerCapture)try{d.setPointerCapture(e.pointerId)}catch(_){}};
+ const move=e=>{if(!drag)return;e.preventDefault&&e.preventDefault();dy=Math.max(0,cy(e)-sy);
+  d.style.transform='translateY('+dy+'px)';d.style.opacity=String(Math.max(.4,1-dy/420))};
+ const up=()=>{if(!drag)return;drag=false;d.style.transition='';
+  if(dy>90){closeNP()}else{d.animate([{transform:'translateY('+dy+'px)'},{transform:'translateY(0)'}],{duration:220, easing:'cubic-bezier(.32,.72,0,1)'});
+   d.style.transform='';d.style.opacity=''}};
+ g.addEventListener('pointerdown',down);g.addEventListener('pointermove',move);
+ g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+ g.addEventListener('touchstart',down,{passive:true});g.addEventListener('touchmove',move,{passive:false});
+ g.addEventListener('touchend',up);g.addEventListener('touchcancel',up)}
 function npTick(){const bar=$('#npbar');if(!bar)return;if(!PLAYER.duration)return;bar.style.width=(PLAYER.currentTime/PLAYER.duration*100)+'%';
  const tt=document.querySelectorAll('#np .tt span');if(tt[0])tt[0].textContent=fmtSec(PLAYER.currentTime);if(tt[1])tt[1].textContent=fmtSec(PLAYER.duration)}
 function fmtSec(s){s=Math.floor(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
