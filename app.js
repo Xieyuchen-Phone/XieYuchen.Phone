@@ -658,8 +658,8 @@ function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.leng
 function closeViewer(){const v=$('#viewer');if(v)v.animate([{opacity:1},{opacity:0}],{duration:220}).onfinish=()=>v.remove()}
 function openViewerSrc(src){const d=document.createElement('div');d.className='viewer';d.id='viewer';
  d.innerHTML=`<div class="vbg"></div><img class="vi" src="${src}" style="inset:8% 0;height:84%;width:100%">
-  <div class="vt"><button class="nb-back" onclick="closeViewer()">${G.chevL}${t('back')}</button><div class="ttl"></div><span></span></div>
-  <div class="vb"><span></span><button>${G.share}</button><button>${G.heart}</button><span></span></div>`;
+  <div class="movtip">轻点任意位置退出</div>`;
+ d.onclick=()=>closeViewer();
  OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
 
 /* --- 邮件 --- */
