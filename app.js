@@ -651,8 +651,9 @@ let viewerIdx=0,viewerList=[];
 function openViewer(n){viewerList=photoSections.flatMap(s=>s[1]);viewerIdx=viewerList.indexOf(n);
  const d=document.createElement('div');d.className='viewer';d.id='viewer';
  d.innerHTML=`<div class="vbg"></div><img class="vi" src="${photoSrc(n)}" style="inset:8% 0;height:84%;width:100%">
-  <div class="vt"><button class="nb-back" onclick="closeViewer()">${G.chevL}${t('back')}</button><div class="ttl"></div><span></span></div>
-  <div class="vb"><button onclick="viewerStep(-1)">${G.chevLb}</button><button>${G.share}</button><button>${G.heart}</button><button onclick="viewerStep(1)">${G.chevRb}</button></div>`;
+  <div class="vb"><button onclick="event.stopPropagation();viewerStep(-1)">${G.chevLb}</button><span></span><button onclick="event.stopPropagation();viewerStep(1)">${G.chevRb}</button></div>
+  <div class="movtip">轻点任意位置退出</div>`;
+ d.onclick=()=>closeViewer();
  OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
 function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;const img=$('#viewer .vi');if(img)img.src=photoSrc(viewerList[viewerIdx])}
 function closeViewer(){const v=$('#viewer');if(v)v.animate([{opacity:1},{opacity:0}],{duration:220}).onfinish=()=>v.remove()}
