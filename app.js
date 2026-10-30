@@ -9,6 +9,18 @@ const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@main
 let CDN_ON=true;
 function cdnU(p){return (CDN_ON&&typeof p==='string'&&p.indexOf('assets/')===0)?CDN_BASE+encodeURI(p):p}
 function cdnBgUrl(p){return 'url("'+cdnU(p)+'")'}
+let cdnErrs=0;
+/* 单个资源失败：只把这一个换回站内；连续多次失败才判定 CDN 不可达并整体回退 */
+function cdnNoteFail(el){
+ if(el){
+  const l=el.getAttribute('data-loc');
+  if(l&&(el.tagName==='IMG'||el.tagName==='VIDEO')){
+   el.src=l;const po=el.getAttribute('data-loc-poster');if(po)el.poster=po;
+  }
+ }
+ cdnErrs++;
+ if(cdnErrs>=3&&CDN_ON)cdnFail();
+}
 function cdnFail(){
  if(!CDN_ON)return;CDN_ON=false;
  try{document.querySelectorAll('[data-loc]').forEach(el=>{
@@ -21,25 +33,26 @@ function cdnFail(){
 function cdnEl(el){
  if(!CDN_ON||!el||el.nodeType!==1)return;
  if(el.hasAttribute('data-loc')){
-  if(!el.dataset.cdnBound){el.dataset.cdnBound='1';el.addEventListener('error',cdnFail,{once:true})}
+  if(!el.dataset.cdnBound){el.dataset.cdnBound='1';el.addEventListener('error',()=>cdnNoteFail(el),{once:true})}
   return}
  if(el.tagName==='IMG'||el.tagName==='VIDEO'){
   const p=el.getAttribute('src');
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.src=cdnU(p)}
   const po=el.getAttribute('poster');
   if(po&&po.indexOf('assets/')===0){el.setAttribute('data-loc-poster',po);el.poster=cdnU(po)}
-  el.addEventListener('error',cdnFail,{once:true});
+  el.addEventListener('error',()=>cdnNoteFail(el),{once:true});
  }else if(el.hasAttribute('data-bg')){
   const p=el.getAttribute('data-bg');
   if(p&&p.indexOf('assets/')===0){el.setAttribute('data-loc',p);el.style.backgroundImage=cdnBgUrl(p)}
  }
 }
-/* 主动探测一次 CDN：不可达则整体回退，避免壁纸等背景图静默空白 */
+/* 探测 CDN 可达性：先试一次，失败隔 1.5s 重试，两次都失败才整体回退 */
 function cdnProbe(){
  if(!CDN_ON)return;
- const i=new Image();
- i.onerror=()=>cdnFail();
- i.src=cdnU('assets/wallpaper/lock.jpg');
+ const u=cdnU('assets/avatar/xie.jpg');
+ const i=new Image();let tried=0;
+ i.onerror=()=>{if(tried++)return;setTimeout(()=>{const j=new Image();j.onerror=()=>cdnFail();j.src=u+'?r=1'},1500)};
+ i.src=u;
 }
 function cdnHTML(html){
  if(!CDN_ON||!html)return html;
@@ -47,10 +60,18 @@ function cdnHTML(html){
   .replace(/src="(assets\/[^"]*)"/g,(m,p)=>'src="'+cdnU(p)+'" data-loc="'+p+'"')
   .replace(/poster="(assets\/[^"]*)"/g,(m,p)=>'poster="'+cdnU(p)+'" data-loc-poster="'+p+'"');
 }
+const _bgCache={};
 function setBg(el,p){
  if(!el)return;el.setAttribute('data-loc',p);
- el.style.backgroundImage=CDN_ON?cdnBgUrl(p):'url("'+p+'")';
- if(!el.dataset.cdnBound){el.dataset.cdnBound='1';}}
+ const local='url("'+p+'")';
+ if(!CDN_ON){el.style.backgroundImage=local;return}
+ const url=cdnU(p);
+ if(_bgCache[url]==='ok'){el.style.backgroundImage='url("'+url+'")';return}
+ if(_bgCache[url]==='bad'){el.style.backgroundImage=local;return}
+ const i=new Image();
+ i.onload=()=>{_bgCache[url]='ok';if(el.getAttribute('data-loc')===p)el.style.backgroundImage='url("'+url+'")'};
+ i.onerror=()=>{_bgCache[url]='bad';if(el.getAttribute('data-loc')===p)el.style.backgroundImage=local;cdnNoteFail()};
+ i.src=url;}
 function cdnScan(root){
  if(!CDN_ON||!root||root.nodeType!==1)return;
  cdnEl(root);
@@ -741,7 +762,7 @@ function openViewer(n){viewerList=photoSections.flatMap(s=>s[1]);viewerIdx=viewe
   <div class="movtip">轻点任意位置退出</div>`;
  d.onclick=()=>closeViewer();
  cdnScan(d);OV.appendChild(d);d.animate([{opacity:0},{opacity:1}],{duration:250})}
-function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;const img=$('#viewer .vi');if(img)img.src=photoSrc(viewerList[viewerIdx])}
+function viewerStep(k){viewerIdx=(viewerIdx+k+viewerList.length)%viewerList.length;const img=$('#viewer .vi');if(img)img.src=cdnU(photoSrc(viewerList[viewerIdx]))}
 function closeViewer(){const v=$('#viewer');if(v)v.animate([{opacity:1},{opacity:0}],{duration:220}).onfinish=()=>v.remove()}
 function openViewerSrc(src){const d=document.createElement('div');d.className='viewer';d.id='viewer';
  d.innerHTML=`<div class="vbg"></div><img class="vi" src="${src}" style="inset:8% 0;height:84%;width:100%">
@@ -819,7 +840,7 @@ function npStep(k){if(nowSong<0)return;
  PLAYER.src=cdnU(songs[nowSong].src);PLAYER.play().catch(()=>{});
  saveState();updateIsland();npRefresh();if(view==='music')show('music')}
 function npRefresh(){const d=$('#np');if(!d)return;const s=songs[nowSong];
- const img=d.querySelector('.bigart img');if(img)img.src=s.cover;
+ const img=d.querySelector('.bigart img');if(img)img.src=cdnU(s.cover);
  const ti=d.querySelector('.ti');if(ti)ti.innerHTML=esc(s.title)+'<small>'+esc(s.artist)+'</small>';
  const bt=$('#npbtn');if(bt)bt.innerHTML=((PLAYER.paused?G.playF:G.pauseF).replace('<svg','<svg width="36" height="36"'));
  const bar=$('#npbar');if(bar)bar.style.width='0';
