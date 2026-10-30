@@ -17,9 +17,11 @@ function cdnNoteFail(el){
   if(l&&(el.tagName==='IMG'||el.tagName==='VIDEO')){
    el.src=l;const po=el.getAttribute('data-loc-poster');if(po)el.poster=po;
   }
+  /* 预取／探测用的游离图片不计入：它们失败不代表页面上看不到图 */
+  if(!el.isConnected)return;
  }
  cdnErrs++;
- if(cdnErrs>=3&&CDN_ON)cdnFail();
+ if(cdnErrs>=4&&CDN_ON)cdnFail();
 }
 function cdnFail(){
  if(!CDN_ON)return;CDN_ON=false;
@@ -769,7 +771,7 @@ function viewerStep(k){
  const pre=new Image();
  /* 先加载完再换 src：切换过程中旧图保留，不会白屏，翻看手感连续 */
  pre.onload=()=>{const t=$('#viewer .vi');if(t)t.src=url};
- pre.onerror=()=>{const t=$('#viewer .vi');if(t)t.src=url};
+ pre.onerror=()=>{const t=$('#viewer .vi');if(t){t.src=photoSrc(viewerList[viewerIdx]);cdnNoteFail(t)}};
  pre.src=url;
  viewerPreload();
 }
