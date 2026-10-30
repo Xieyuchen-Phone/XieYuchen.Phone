@@ -4,7 +4,8 @@
    （实测 GitHub Pages 直连约 7KB/s，CDN 约 1.7MB/s）
    CDN 不可用时自动整体回退到站内相对路径，不影响可用性
    ============================================================ */
-const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/Xieyuchen-Phone.github.io@main/';
+/* 使用独立的资源仓库作 CDN 源，避免主站点仓库上旧版大文件被 CDN 缓存住 */
+const CDN_BASE='https://cdn.jsdelivr.net/gh/Xieyuchen-Phone/XieYuchen.Phone@main/';
 let CDN_ON=true;
 function cdnU(p){return (CDN_ON&&typeof p==='string'&&p.indexOf('assets/')===0)?CDN_BASE+encodeURI(p):p}
 function cdnBgUrl(p){return 'url("'+cdnU(p)+'")'}
