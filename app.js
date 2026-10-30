@@ -315,11 +315,23 @@ function ensureMomentLikes(){MOMENTS.forEach(m=>{if(!momentLikes[m.id])momentLik
 function likesHTML(id){const lk=(momentLikes[id]||[]).map(moName);
  if(!lk.length)return '';
  return `<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:-2px;margin-right:6px"><path d="M12 20s-7-4.6-9.2-9A5.2 5.2 0 0 1 12 6.5 5.2 5.2 0 0 1 21.2 11c-2.2 4.4-9.2 9-9.2 9Z" fill="none" stroke="#576b95" stroke-width="1.7"/></svg>${lk.map(x=>`<b>${esc(x)}</b>`).join('<span style="color:#9a9a9a">，</span>')}`}
+/* --- 朋友圈视频：点击放大观看，再次点击退出 --- */
+function openMoVideo(src){
+ const d=document.createElement('div');d.className='pg movv';d.id='movUI';
+ d.innerHTML=`<video id="movV" src="${src}" playsinline autoplay loop style="width:100%;height:100%;object-fit:contain;background:#000"></video>
+  <div class="movtip">轻点任意位置退出</div>`;
+ d.onclick=()=>closeMoVideo();
+ OV.appendChild(d);
+ const v=d.querySelector('video');
+ v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})});
+ d.animate([{opacity:0},{opacity:1}],{duration:240})}
+function closeMoVideo(){const m=$('#movUI');if(!m)return;const v=m.querySelector('video');if(v)v.pause();
+ m.animate([{opacity:1},{opacity:0}],{duration:200}).onfinish=()=>m.remove()}
 function phMedia(label){return `<div class="mmph">${esc(label||'[图片]')}</div>`}
 function momentMedia(m){
  if(!m.media)return '';
  const md=m.media;
- if(md.t==='video')return `<div class="mmv" onclick="const v=this.querySelector('video');if(v.paused){v.play();this.classList.add('on')}else{v.pause();this.classList.remove('on')}"><video src="${md.src}" playsinline preload="metadata" onerror="this.closest('.mmv').outerHTML=phMedia('${md.label||''}')"></video><span class="mmplay"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5Z" fill="#fff"/></svg></span></div>`;
+ if(md.t==='video')return `<div class="mmv" onclick="openMoVideo('${md.src}')"><video src="${md.src}" poster="${md.poster||''}" playsinline preload="metadata" onerror="this.closest('.mmv').outerHTML=phMedia('${md.label||''}')"></video><span class="mmplay"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5Z" fill="#fff"/></svg></span></div>`;
  return `<div class="mmi"><img src="${md.src}" loading="lazy" onclick="event.stopPropagation();openViewerSrc('${md.src}',this)" onerror="this.parentElement.outerHTML=phMedia('${md.label||''}')"></div>`}
 function momentHTML(m){
  const who=moName(m.who),av=avatarOf(who)||'';
@@ -563,7 +575,7 @@ function noteDate(ds){const p=parseLabel(ds);if(!p)return ds;
  if(diff===1)return t('yesterday');if(diff<7)return wdLong(p.y,p.m,p.d);return fmtMD(p.m,p.d)}
 VIEWS.notes=()=>({cls:'grouped notes-pg',html:navHTML({title:t('app_notes'),back:t('folders'),right:G.dots})+
  `<div class="scroll"><h1 class="lt">${t('app_notes')}</h1><div class="srch">${G.search}${t('search')}</div>
- <div class="gh" style="margin-top:8px;display:flex;align-items:center;gap:4px"><span style="width:13px;display:inline-flex">${G.pin}</span>${t('pinned')}</div><div class="group note-l">${notes.slice(0,1).map((n,i)=>`<button class="row tap" onclick="noteId=${i};push('note')"><b>${esc(n.title)}</b><small><em>${noteDate(n.date)}</em>${esc(n.body.split('\n')[0])}</small></button>`).join('')}</div>
+ <div class="gh" style="margin-top:8px">${t('pinned')}</div><div class="group note-l">${notes.slice(0,1).map((n,i)=>`<button class="row tap" onclick="noteId=${i};push('note')"><b>${esc(n.title)}</b><small><em>${noteDate(n.date)}</em>${esc(n.body.split('\n')[0])}</small></button>`).join('')}</div>
  <div class="gh">${t('notesSec')}</div><div class="group note-l">${notes.slice(1).map((n,i)=>`<button class="row tap" onclick="noteId=${i+1};push('note')"><b>${esc(n.title)}</b><small><em>${noteDate(n.date)}</em>${esc(n.body.split('\n')[0])}</small></button>`).join('')}</div></div>
  <div class="toolbar"><span style="width:24px"></span><span style="color:#000;align-self:center;font-size:11px">${t('nNotes',notes.length)}</span>${G.compose}</div>`});
 VIEWS.note=()=>{const n=notes[noteId];return{cls:'notes-pg',html:navHTML({title:'',back:t('app_notes'),right:G.share+G.dots})+

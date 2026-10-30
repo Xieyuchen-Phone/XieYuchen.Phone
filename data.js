@@ -11,6 +11,7 @@ const PASSCODE='0123';
 
 /* ---------- 头像 ---------- */
 const AVATARS={
+ 'X':'assets/avatar/xie.jpg',
  '解雨臣':'assets/avatar/xie.jpg',
  '黑瞎子':'assets/avatar/hei.jpg',
  '齐':'assets/avatar/hei.jpg',
@@ -1028,7 +1029,7 @@ const DEVICE_NAME='iPhone';
 const MOMENT_COVER='assets/moments/封面.jpg';
 /* likes/comments 中的 'X' 代表机主（渲染时显示为解雨臣） */
 const MOMENTS=[
- {id:1,who:'X',date:'1月23日',text:'🎂',media:{t:'video',src:'assets/moments/齐生日.mp4',label:'齐生日.mov'},
+ {id:1,who:'X',date:'1月23日',text:'🎂',media:{t:'video',src:'assets/moments/齐生日.mp4',poster:'assets/moments/齐生日_封面.jpg',label:'齐生日.mov'},
   likes:['齐','吴邪','夏池堂','苏万','秀秀','胖子','黎簇','杨好','阿透','梁烟烟','张起灵'],
   comments:[['吴邪','爱情使人变脸，我从没见过瞎子露出这种表情'],['胖子','他俩一起来我们这的时候你没见过？','吴邪'],['黎簇','我懂你','吴邪'],['夏池堂','祝二老板生日快乐！'],['苏万','祝师父生日快乐！'],['秀秀','祝姐夫生日快乐！'],['杨好','这蛋糕看着好好吃啊'],['阿透','🎂🎂🎂'],['梁烟烟','他今年多大岁数了？'],['阿透','没插蜡烛，应该是0岁','梁烟烟']]},
  {id:2,who:'齐',date:'2月14日',text:'',media:{t:'img',src:'assets/moments/玫瑰花.jpg'},
@@ -1055,7 +1056,7 @@ const MOMENTS=[
  {id:9,who:'吴邪',date:'9月25日',text:'但愿人长久',media:{t:'img',src:'assets/moments/月亮.jpg',label:'月亮.jpg'},
   likes:['张起灵','胖子','X','齐','秀秀','黎簇','苏万','杨好'],
   comments:[]},
- {id:10,who:'齐',date:'10月3日',text:'🎂',media:{t:'video',src:'assets/moments/解生日.mp4',label:'解生日.mov'},
+ {id:10,who:'齐',date:'10月3日',text:'🎂',media:{t:'video',src:'assets/moments/解生日.mp4',poster:'assets/moments/解生日_封面.jpg',label:'解生日.mov'},
   likes:['齐','吴邪','胖子','秀秀','苏万','X','杨好','黎簇','阿透','夏池堂','梁烟烟','张起灵'],
   comments:[['吴邪','祝小花生日快乐！'],['吴邪','你俩真壕无人性！'],['胖子','阿花生日快乐！'],['胖子','不对，怎么是你发的'],['吴邪','年初瞎子生日的时候他俩就这样啊，你才发现吗','胖子'],['胖子','我去！真腻歪！','吴邪'],['秀秀','小花哥哥生日快乐！'],['苏万','祝解老师生日快乐！'],['杨好','祝解老师生日快乐！'],['黎簇','祝解老师生日快乐！'],['阿透','祝老板生日快乐！'],['夏池堂','祝老板生日快乐！'],['梁烟烟','🎂🎂🎂']]},
 ];
