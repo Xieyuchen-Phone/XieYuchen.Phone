@@ -597,6 +597,11 @@ svg{display:block}
  <div id="hb" class="light" aria-label="回到主屏幕"><i></i></div>
 </div>
 <audio id="player" preload="auto"></audio>
+<div id="bootTip" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#000;color:rgba(255,255,255,.72);font:14px/1.6 -apple-system,'PingFang SC',sans-serif">
+ <div style="width:26px;height:26px;border:2.5px solid rgba(255,255,255,.18);border-top-color:#fff;border-radius:50%;animation:bspin .9s linear infinite"></div>
+ <div>正在载入…</div>
+</div>
+<style>@keyframes bspin{to{transform:rotate(360deg)}}</style>
 <script src="ui.js?v=8"></script>
 <script src="data.js?v=8"></script>
 <script src="app.js?v=8"></script>

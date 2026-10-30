@@ -1162,6 +1162,7 @@ VIEWS.tetris=()=>({cls:'tet',dark:true,html:`<div style="position:relative;width
 
 /* ============================ 启动 ============================ */
 function boot(){
+ const _bt=document.getElementById('bootTip');if(_bt)_bt.remove();
  setBg($('#wall'),'assets/wallpaper/lock.jpg');
  const st=loadState();
  if(st){
